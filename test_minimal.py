@@ -143,3 +143,20 @@ ask_and_run(
     "Print top 10 rows where anomaly is True sorted by z_score descending: print df[df['anomaly']==True].nlargest(10,'z_score')[['route','allarmati','z_score']]. "
     "Save the full dataframe to '/Users/stefanolosurdo/Desktop/files 2/output/outlier_results.csv' without index."
 )
+
+# ── Task 7: Risk Profiling ──
+ask_and_run(
+    "Load '/Users/stefanolosurdo/Desktop/files 2/output/outlier_results.csv' with pandas. "
+    "Import numpy as np. "
+    "Filter only rows where anomaly is True. Print how many. "
+    "If zero, save empty dataframe to risk_profiled.csv and print 'No anomalies'. "
+    "Otherwise: "
+    "rule_route = anom['ratio_to_baseline'] > 3.0. "
+    "rule_zscore_high = anom['z_score'].abs() > 8. "
+    "rule_zscore_med = (anom['z_score'].abs() > 5) & (~rule_zscore_high). "
+    "conditions = [rule_route & rule_zscore_high, rule_route | rule_zscore_high, rule_zscore_med]. "
+    "choices = ['CRITICAL', 'HIGH', 'MEDIUM']. "
+    "anom['risk_level'] = np.select(conditions, choices, default='LOW'). "
+    "Print risk_level value_counts. "
+    "Save full dataframe to '/Users/stefanolosurdo/Desktop/files 2/output/risk_profiled.csv' without index."
+)
