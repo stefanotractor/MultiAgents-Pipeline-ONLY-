@@ -71,5 +71,5 @@ ask_and_run(
     "Print columns dtypes"
     "For each numeric column of each dataset fill missing values with 0"
     "For each string column of each dataset fill missing values with Nan"
-    "For each column that has "object" attribute print value_counts"
+    "For each column that has object attribute of each dataset print value_counts"
 )
