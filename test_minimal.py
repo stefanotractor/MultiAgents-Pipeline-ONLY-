@@ -30,7 +30,7 @@ def ask_and_run(task, max_retries=2):
     
     for attempt in range(max_retries + 1):
         response = client.chat.completions.create(
-            model="qwen2.5-coder-7b-instruct",
+            model="google/gemma-3-4b",
             messages=messages,
             max_tokens=512,
             temperature=0.0
@@ -62,7 +62,27 @@ def ask_and_run(task, max_retries=2):
     return None
 
 # ── Test ──
+
+# ── Task 1: Load e standardize ──py
 ask_and_run(
-    "Load '/Users/stefanolosurdo/Desktop/files 2/data/ALLARMI.csv' with pandas. "
-    "Print the shape and the list of column names."
+    "Load '/Users/matteo/Desktop/MultiAgents-Pipeline-ONLY-/data/ALLARMI.csv' and "
+    "'/Users/matteo/Desktop/MultiAgents-Pipeline-ONLY-/data/TIPOLOGIA_VIAGGIATORE.csv' with pandas. "
+    "Standardize all column names to lowercase snake_case. "
+    "Print columns dtypes"
+    "For each numeric column fill missing values with 0"
+    "For each string column fill missing values with Nan"
+    "For each object column print value_counts"
+    "Print dtypes to confirm."
+)
+
+# ── Task 2: Check types e convert ──
+ask_and_run(
+    "Load '/Users/matteo/Desktop/MultiAgents-Pipeline-ONLY-/data/ALLARMI.csv' with pandas. "
+    "Standardize column names to lowercase snake_case. "
+    "Print columns dtypes"
+    "For each numeric column fill missing values with 0"
+    "For each string column fill missing values with Nan"
+    "For each object column print value_counts"
+    "Convert columns that look numeric but are stored as string to int or float, fill NaN with 0. "
+    "Print dtypes to confirm."
 )

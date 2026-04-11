@@ -6,7 +6,7 @@ import os
 # ── LM Studio ────────────────────────────────────────────────────────────────
 LM_STUDIO_BASE_URL = "http://localhost:1234/v1"
 LM_STUDIO_API_KEY = "lm-studio"
-LM_STUDIO_MODEL = "qwen2.5-coder-7b-instruct"
+LM_STUDIO_MODEL = "google/gemma-3-4b"
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
