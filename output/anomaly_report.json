@@ -1,0 +1,22 @@
+[
+  {
+    "ctx": "{'route': 'TIA->VRN', 'alarms': 5000, 'baseline': 28.3, 'zscore': 30.97, 'risk': 'CRITICAL'}",
+    "explanation": "The transit anomaly on route TIA to VRN has triggered a critical alert due to an unusually high number of alarms (5000) and a significant deviation from the baseline (28.3), as indicated by a z-score of 30.97, suggesting a major issue that requires immediate attention."
+  },
+  {
+    "ctx": "{'route': 'TIA->FCO', 'alarms': 164, 'baseline': 4.9, 'zscore': 12.82, 'risk': 'CRITICAL'}",
+    "explanation": "The transit anomaly on the TIA to FCO route has triggered 164 alarms with a z-score of 12.82, indicating a critical risk level."
+  },
+  {
+    "ctx": "{'route': 'TIA->FCO', 'alarms': 164, 'baseline': 4.9, 'zscore': 12.82, 'risk': 'CRITICAL'}",
+    "explanation": "The transit anomaly on the route TIA to FCO has triggered 164 alarms with a z-score of 12.82, indicating it is significantly outside the baseline and poses a critical risk."
+  },
+  {
+    "ctx": "{'route': 'TIA->FCO', 'alarms': 164, 'baseline': 4.9, 'zscore': 12.82, 'risk': 'CRITICAL'}",
+    "explanation": "The transit anomaly for route TIA to FCO has triggered 164 alarms with a z-score of 12.82, indicating it is significantly outside the baseline and poses a critical risk."
+  },
+  {
+    "ctx": "{'route': 'TIA->FCO', 'alarms': 164, 'baseline': 4.9, 'zscore': 12.82, 'risk': 'CRITICAL'}",
+    "explanation": "The transit anomaly on route TIA to FCO has triggered 164 alarms and is classified as CRITICAL with a z-score of 12.82, indicating a significant deviation from the baseline performance. This suggests there may be an urgent issue affecting the reliability or safety of the transit."
+  }
+]
