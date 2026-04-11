@@ -65,24 +65,23 @@ def ask_and_run(task, max_retries=2):
 
 # ── Task 1: Load and standardize ALLARMI.csv
 ask_and_run(
-    "Load '/Users/stefanolosurdo/Desktop/files 2/data/ALLARMI.csv' with pandas as df1."
-    "Print shape using df1.shape"
+    "Load '/Users/stefanolosurdo/Desktop/files 2/data/ALLARMI.csv' with pandas. "
+    "Print the shape. "
     "Standardize all column names to lowercase snake_case. "
     "Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
-    "Remove duplicate rows using df.drop_duplicates() and print shape using: df1.shape.  "
+    "Remove duplicate rows using df.drop_duplicates() and print shape. "
     "For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
-    "Print updated shape"
     "Use pd.api.types.is_numeric_dtype() to check column types. "
     "For numeric columns fill NaN with 0. For non-numeric columns fill NaN with 'unknown'. "
-    "Print columns' names."
+    "Print columns names. "
     "Save to '/Users/stefanolosurdo/Desktop/files 2/output/allarmi_clean.csv' without index."
 )
 
 # ── Task 2: Load and standardize TIPOLOGIA_VIAGGIATORE.csv
 ask_and_run(
     "Load '/Users/stefanolosurdo/Desktop/files 2/data/TIPOLOGIA_VIAGGIATORE.csv' with pandas. "
-    "Print shape using: df2.shape"
-   "Standardize all column names to lowercase snake_case. "
+    "Print the shape"
+    "Standardize all column names to lowercase snake_case. "
     "Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
     "Remove duplicate rows using df.drop_duplicates() and print shape using: df2.shape. "
     "For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
@@ -100,6 +99,7 @@ ask_and_run(
     "Merge on the common columns using outer join. "
     "Remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
     "Print shape of the merged dataframe. "
+    "For all string columns: convert all values to lowercase using: df = df.astype(str).apply(lambda x: x.str.lower()). "
     "Save to '/Users/stefanolosurdo/Desktop/files 2/output/merged_data.csv' without index."
 )
 
@@ -111,4 +111,35 @@ ask_and_run(
     "Group by 'route' using df.groupby('route').agg(agg_dict).reset_index(). "
     "Print shape. "
     "Save to '/Users/stefanolosurdo/Desktop/files 2/output/routes_summary.csv' without index."
+)
+
+# ── Task 5: Baseline statistics (globali) ──
+ask_and_run(
+    "Load '/Users/stefanolosurdo/Desktop/files 2/output/routes_summary.csv' with pandas. "
+    "Ensure 'allarmati' is numeric using pd.to_numeric(errors='coerce').fillna(0). "
+    "Compute global mean and std of 'allarmati' across all routes. "
+    "Add column 'rolling_mean_alarms' = global mean. "
+    "Add column 'rolling_std_alarms' = global std. If std is 0, set it to 1. "
+    "Add column 'z_score': (allarmati - rolling_mean_alarms) / rolling_std_alarms. "
+    "Add column 'ratio_to_baseline': allarmati / rolling_mean_alarms. Replace inf with 0. "
+    "Print global mean and std. "
+    "Print shape. "
+    "Print top 10 rows by z_score descending showing route, allarmati, rolling_mean_alarms, z_score. "
+    "Save the full dataframe to '/Users/stefanolosurdo/Desktop/files 2/output/baseline_data.csv' without index."
+)
+
+# ── Task 6: Outlier Detection ──
+ask_and_run(
+    "Load '/Users/stefanolosurdo/Desktop/files 2/output/baseline_data.csv' with pandas. "
+    "Import IsolationForest from sklearn.ensemble. "
+    "Ensure columns 'allarmati', 'z_score', 'ratio_to_baseline' are numeric using pd.to_numeric(errors='coerce').fillna(0). "
+    "Replace inf and -inf with 0. "
+    "Build feature matrix with columns: allarmati, z_score, ratio_to_baseline. "
+    "model = IsolationForest(contamination=0.05, random_state=42). "
+    "model.fit(feature_matrix). "
+    "df['anomaly'] = model.predict(feature_matrix) == -1. "
+    "Do NOT drop any columns. Keep all columns including allarmati, z_score, ratio_to_baseline. "
+    "Print number of rows where anomaly is True, and total rows. "
+    "Print top 10 rows where anomaly is True sorted by z_score descending: print df[df['anomaly']==True].nlargest(10,'z_score')[['route','allarmati','z_score']]. "
+    "Save the full dataframe to '/Users/stefanolosurdo/Desktop/files 2/output/outlier_results.csv' without index."
 )
