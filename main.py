@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 Transit Anomaly Detection — Multi-Agent System (v2 Light)
-Usage: python main.py [--verbose] [--algorithm IsolationForest|LOF|zscore]
+Usage:
+  python main.py                          # normal run (with cache)
+  python main.py --no-cache               # force re-run all tasks
+  python main.py --algorithm LOF          # change algorithm
+  python main.py --query "partenza FCO"   # filter data first
 """
 import argparse, os, sys
 from datetime import datetime
@@ -12,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--algorithm", choices=["IsolationForest","LOF","zscore"], default=None)
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--no-cache", action="store_true", help="Force re-run all tasks, ignore cached outputs")
     parser.add_argument("--query", type=str, default=None,
         help="Pandas query filter, e.g. \"areoporto_partenza == 'FCO'\"")
     args = parser.parse_args()
@@ -24,19 +29,22 @@ def main():
 
     from config import OUTPUT_DIR, LM_STUDIO_MODEL, DEFAULT_OUTLIER_ALGORITHM
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    os.chdir(OUTPUT_DIR)
+
+    # ── Cache control ──
+    if args.no_cache:
+        import agents
+        agents.USE_CACHE = False
+        print("  [cache] Cache disabled — all tasks will re-run.\n")
 
     if args.query:
         import pandas as pd, shutil
         from openai import OpenAI
         from config import ALLARMI_CSV, TIPOLOGIA_CSV, LM_STUDIO_BASE_URL, LM_STUDIO_API_KEY, LM_STUDIO_MODEL
 
-        # Load one CSV to get column names and sample values
         sample_df = pd.read_csv(ALLARMI_CSV, nrows=5)
         sample_df.columns = sample_df.columns.str.lower().str.strip().str.replace(' ', '_').str.replace('%', '_')
         cols = sample_df.columns.unique()
         col_info = {c: sample_df[c].head(3).tolist() if sample_df[c].ndim == 1 else sample_df[c].iloc[:, 0].head(3).tolist() for c in cols}
-        # Ask LLM to translate natural language to pandas query
         client = OpenAI(base_url=LM_STUDIO_BASE_URL, api_key=LM_STUDIO_API_KEY)
         system_msg = (
             "You translate user queries into pandas DataFrame .query() expressions. "
@@ -59,7 +67,6 @@ def main():
         print(f"  User query: {args.query}")
         print(f"  LLM interpreted as: {pandas_query}")
 
-        # Apply filter to copies of CSVs
         for csv_path in [ALLARMI_CSV, TIPOLOGIA_CSV]:
             dst = os.path.join(OUTPUT_DIR, os.path.basename(csv_path))
             shutil.copy2(csv_path, dst)
@@ -105,7 +112,7 @@ def main():
     }
 
     try:
-        for event in graph.stream(state, {"recursion_limit": 50}):
+        for event in graph.stream(state, {"recursion_limit": 80}):
             for node, data in event.items():
                 if node == "__end__":
                     continue
@@ -116,7 +123,6 @@ def main():
                         print(f"\n{'='*50}")
                         print(f"  [{node.upper()}]")
                         print(f"{'='*50}")
-                        # Truncate for readability
                         if len(content) > 1000:
                             content = content[:1000] + "\n... [truncated]"
                         print(content)
@@ -134,8 +140,11 @@ def main():
     print("\n" + "=" * 60)
     print("  DONE")
     print("=" * 60)
-    for f in ["merged_data.csv","baseline_data.csv","outlier_results.csv",
-              "risk_profiled.csv","anomaly_report.txt","anomaly_report.json"]:
+    for f in [
+        "allarmi_clean.csv", "tipologia_clean.csv", "merged_data.csv",
+        "routes_summary.csv", "baseline_data.csv", "outlier_results.csv",
+        "risk_profiled.csv", "anomaly_report.txt", "anomaly_report.json",
+    ]:
         p = os.path.join(OUTPUT_DIR, f)
         if os.path.exists(p):
             print(f"  ✓ {f} ({os.path.getsize(p):,} bytes)")

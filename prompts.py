@@ -1,6 +1,8 @@
 """
 Natural language prompts for each pipeline task.
 The LLM receives these and generates Python code autonomously.
+Each prompt mirrors the exact working version from test_minimal.py,
+adapted to use config paths instead of hardcoded ones.
 """
 
 from config import (
@@ -18,11 +20,13 @@ from config import (
 )
 
 
+# ── Task 1: Load and clean ALLARMI.csv ───────────────────────────────────────
 def _build_data_prompt():
     return (
-        f"Load '{ALLARMI_CSV}' with pandas as df1."
-        f"Print shape using df1.shape. "
+        f"Load '{ALLARMI_CSV}' with pandas. "
+        f"Print the shape. "
         f"Standardize all column names to lowercase snake_case. "
+        f"For all string columns: convert all values to lowercase using: df = df.astype(str).apply(lambda x: x.str.lower()). "
         f"Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
         f"Remove duplicate rows using df.drop_duplicates() and print shape. "
         f"For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
@@ -33,11 +37,13 @@ def _build_data_prompt():
     )
 
 
+# ── Task 2: Load and clean TIPOLOGIA_VIAGGIATORE.csv ─────────────────────────
 def _build_data_prompt_2():
     return (
         f"Load '{TIPOLOGIA_CSV}' with pandas. "
-        f"Print shape. "
+        f"Print the shape. "
         f"Standardize all column names to lowercase snake_case. "
+        f"For all string columns: convert all values to lowercase using: df = df.astype(str).apply(lambda x: x.str.lower()). "
         f"Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
         f"Remove duplicate rows using df.drop_duplicates() and print shape. "
         f"For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
@@ -48,6 +54,7 @@ def _build_data_prompt_2():
     )
 
 
+# ── Task 3: Merge ────────────────────────────────────────────────────────────
 def _build_merge_prompt():
     return (
         f"Load '{OUTPUT_DIR}/allarmi_clean.csv' and "
@@ -60,6 +67,7 @@ def _build_merge_prompt():
     )
 
 
+# ── Task 4: Group by route ──────────────────────────────────────────────────
 def _build_baseline_prompt():
     return (
         f"Load '{OUTPUT_DIR}/merged_data.csv' with pandas. "
@@ -71,56 +79,88 @@ def _build_baseline_prompt():
     )
 
 
+# ── Task 5: Baseline statistics ──────────────────────────────────────────────
+def _build_baseline_stats_prompt():
+    return (
+        f"Load '{OUTPUT_DIR}/routes_summary.csv' with pandas. "
+        f"Ensure 'allarmati' is numeric using pd.to_numeric(errors='coerce').fillna(0). "
+        f"Compute global mean and std of 'allarmati' across all routes. "
+        f"Add column 'rolling_mean_alarms' = global mean. "
+        f"Add column 'rolling_std_alarms' = global std. If std is 0, set it to 1. "
+        f"Add column 'z_score': (allarmati - rolling_mean_alarms) / rolling_std_alarms. "
+        f"Add column 'ratio_to_baseline': allarmati / rolling_mean_alarms. Replace inf with 0. "
+        f"Print global mean and std. "
+        f"Print shape. "
+        f"Print top 10 rows by z_score descending showing route, allarmati, rolling_mean_alarms, z_score. "
+        f"Save the full dataframe to '{OUTPUT_DIR}/baseline_data.csv' without index."
+    )
+
+
+# ── Task 6: Outlier Detection ───────────────────────────────────────────────
 def _build_outlier_prompt():
     algo = DEFAULT_OUTLIER_ALGORITHM
     contam = ISOLATION_FOREST_CONTAMINATION
     neighbors = LOF_N_NEIGHBORS
     zscore_t = ZSCORE_THRESHOLD
     return (
-        f"Load '{OUTPUT_DIR}/routes_summary.csv' with pandas. "
-        f"Ensure 'allarmati' column is numeric using pd.to_numeric(errors='coerce').fillna(0). "
-        f"Compute z_score for 'allarmati': (value - mean) / std. Replace inf with 0. "
-        f"Compute ratio_to_baseline: value / mean. Replace inf with 0. "
+        f"Load '{OUTPUT_DIR}/baseline_data.csv' with pandas. "
+        f"Import IsolationForest from sklearn.ensemble. "
+        f"Ensure columns 'allarmati', 'z_score', 'ratio_to_baseline' are numeric using pd.to_numeric(errors='coerce').fillna(0). "
+        f"Replace inf and -inf with 0. "
         f"Build feature matrix with columns: allarmati, z_score, ratio_to_baseline. "
-        f"Apply {algo} for anomaly detection. "
-        f"If IsolationForest: use contamination={contam}. "
-        f"If LOF: use n_neighbors={neighbors}. "
-        f"If zscore: flag rows where abs(z_score) > {zscore_t}. "
-        f"Add 'anomaly' boolean column. "
-        f"Print number of anomalies and total rows. "
-        f"Save to '{OUTPUT_DIR}/outlier_results.csv' without index."
+        + (
+            f"model = IsolationForest(contamination={contam}, random_state=42). "
+            f"model.fit(feature_matrix). "
+            f"df['anomaly'] = model.predict(feature_matrix) == -1. "
+            if algo == "IsolationForest" else
+            f"from sklearn.neighbors import LocalOutlierFactor. "
+            f"model = LocalOutlierFactor(n_neighbors={neighbors}, contamination={contam}). "
+            f"df['anomaly'] = model.fit_predict(feature_matrix) == -1. "
+            if algo == "LOF" else
+            f"df['anomaly'] = df['z_score'].abs() > {zscore_t}. "
+        )
+        + f"Do NOT drop any columns. Keep all columns including allarmati, z_score, ratio_to_baseline. "
+        f"Print number of rows where anomaly is True, and total rows. "
+        f"Print top 10 rows where anomaly is True sorted by z_score descending: print df[df['anomaly']==True].nlargest(10,'z_score')[['route','allarmati','z_score']]. "
+        f"Save the full dataframe to '{OUTPUT_DIR}/outlier_results.csv' without index."
     )
 
 
+# ── Task 7: Risk Profiling ──────────────────────────────────────────────────
 def _build_risk_prompt():
     mult = ALERT_RATE_MULTIPLIER
     return (
         f"Load '{OUTPUT_DIR}/outlier_results.csv' with pandas. "
-        f"Filter only rows where anomaly is True. "
-        f"If no anomalies, save empty dataframe to '{OUTPUT_DIR}/risk_profiled.csv' and print 'No anomalies'. "
-        f"Otherwise apply these rules: "
-        f"rule_route: ratio_to_baseline > {mult}. "
-        f"rule_zscore_high: abs(z_score) > 8. "
-        f"rule_zscore_med: abs(z_score) > 5 and not rule_zscore_high. "
-        f"Risk level: CRITICAL if rule_route AND rule_zscore_high, "
-        f"HIGH if rule_route OR rule_zscore_high, "
-        f"MEDIUM if rule_zscore_med, else LOW. "
-        f"Use np.select for conditions. "
+        f"Import numpy as np. "
+        f"Filter only rows where anomaly is True. Print how many. "
+        f"If zero, save empty dataframe to '{OUTPUT_DIR}/risk_profiled.csv' and print 'No anomalies'. "
+        f"Otherwise: "
+        f"rule_route = anom['ratio_to_baseline'] > {mult}. "
+        f"rule_zscore_high = anom['z_score'].abs() > 8. "
+        f"rule_zscore_med = (anom['z_score'].abs() > 5) & (~rule_zscore_high). "
+        f"conditions = [rule_route & rule_zscore_high, rule_route | rule_zscore_high, rule_zscore_med]. "
+        f"choices = ['CRITICAL', 'HIGH', 'MEDIUM']. "
+        f"anom['risk_level'] = np.select(conditions, choices, default='LOW'). "
         f"Print risk_level value_counts. "
-        f"Save to '{OUTPUT_DIR}/risk_profiled.csv' without index."
+        f"Save full dataframe to '{OUTPUT_DIR}/risk_profiled.csv' without index."
     )
 
 
+# ── Task 8: Report (placeholder — da implementare successivamente) ───────────
 def _build_report_prompt():
     return (
         f"Load '{OUTPUT_DIR}/risk_profiled.csv' with pandas. "
-        f"Take top 5 rows by z_score. "
-        f"For each row, call LM Studio API (OpenAI SDK, base_url='{LM_STUDIO_BASE_URL}', "
-        f"api_key='{LM_STUDIO_API_KEY}', model='{LM_STUDIO_MODEL}') "
-        f"asking to explain the transit anomaly in 2 sentences. "
-        f"Build a text report with header 'TRANSIT ANOMALY REPORT' and date. "
+        f"Sort by z_score descending and take top 5 rows. "
+        f"Import OpenAI from openai. "
+        f"Create client: client = OpenAI(base_url='{LM_STUDIO_BASE_URL}', api_key='{LM_STUDIO_API_KEY}'). "
+        f"For each row, call client.chat.completions.create("
+        f"model='{LM_STUDIO_MODEL}', "
+        f"messages=[{{'role':'user','content':'Explain this transit anomaly in 2 sentences: ' + str(row.to_dict())}}], "
+        f"max_tokens=150). "
+        f"Get response text from response.choices[0].message.content. "
+        f"Build a text report with header 'TRANSIT ANOMALY REPORT' and today's date. "
         f"Save report to '{OUTPUT_DIR}/anomaly_report.txt'. "
-        f"Save JSON version to '{OUTPUT_DIR}/anomaly_report.json'. "
+        f"Also save a JSON version with json.dump to '{OUTPUT_DIR}/anomaly_report.json'. "
         f"Print the report."
     )
 
@@ -130,7 +170,8 @@ TASKS = [
     ("data_loading_allarmi",   _build_data_prompt()),
     ("data_loading_tipologia", _build_data_prompt_2()),
     ("merge",                  _build_merge_prompt()),
-    ("baseline_building",      _build_baseline_prompt()),
+    ("baseline_grouping",      _build_baseline_prompt()),
+    ("baseline_stats",         _build_baseline_stats_prompt()),
     ("outlier_detection",      _build_outlier_prompt()),
     ("risk_profiling",         _build_risk_prompt()),
     ("report_generation",      _build_report_prompt()),

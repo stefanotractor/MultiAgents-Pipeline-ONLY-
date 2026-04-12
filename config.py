@@ -2,11 +2,13 @@
 Configuration for Transit Anomaly Detection — Multi-Agent System (v2 Light).
 """
 import os
+from dotenv import load_dotenv
 
-# ── LM Studio ────────────────────────────────────────────────────────────────
-LM_STUDIO_BASE_URL = "http://localhost:1234/v1"
-LM_STUDIO_API_KEY = "lm-studio"
-LM_STUDIO_MODEL = "google/gemma-3-4b"
+load_dotenv()
+
+LM_STUDIO_BASE_URL = "https://api.groq.com/openai/v1"
+LM_STUDIO_API_KEY  = os.getenv("GROQ_API_KEY", "")
+LM_STUDIO_MODEL    = "llama-3.3-70b-versatile"
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
