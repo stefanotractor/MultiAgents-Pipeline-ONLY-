@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Transit Anomaly Detection — Multi-Agent System (v2 Light)
+Transit Anomaly Detection — Multi-Agent System
 Usage:
   python main.py                          # normal run (with cache)
   python main.py --no-cache               # force re-run all tasks

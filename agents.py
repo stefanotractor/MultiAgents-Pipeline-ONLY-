@@ -1,5 +1,5 @@
 """
-Multi-Agent System — v2 Light (optimized for small local LLMs + cloud APIs).
+Multi-Agent System.
 
 3 agents: supervisor (routing logic), code_executor (direct LLM → REPL),
 validator (file check — no LLM needed).
@@ -209,7 +209,7 @@ def supervisor_node(state: AgentState) -> Command[Literal["code_executor", "vali
     # ── pending / failed → send to code_executor
     if status in ("pending", "failed"):
         if status == "failed" and retries >= MAX_RETRIES:
-            print(f"\n⚠️  SKIP '{task_name}' after {retries} retries\n")
+            print(f"\n  SKIP '{task_name}' after {retries} retries\n")
             next_idx = idx + 1
             return Command(
                 goto="__end__" if next_idx >= len(TASKS) else "supervisor",

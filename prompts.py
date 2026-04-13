@@ -1,8 +1,6 @@
 """
 Natural language prompts for each pipeline task.
 The LLM receives these and generates Python code autonomously.
-Each prompt mirrors the exact working version from test_minimal.py,
-adapted to use config paths instead of hardcoded ones.
 """
 
 from config import (
@@ -26,7 +24,7 @@ def _build_data_prompt():
         f"Load '{ALLARMI_CSV}' with pandas. "
         f"Print the shape. "
         f"Standardize all column names to lowercase snake_case. "
-        f"For all string columns: convert all values to lowercase using: df = df.astype(str).apply(lambda x: x.str.lower()). "
+        f"Normalize all text/string columns to lowercase for consistent matching. Handle NaN and mixed-type values gracefully — only apply lowercase to actual string values, skip nulls. For example, 'ROME', 'Rome', and 'rome' should all become 'rome', while NaN stays NaN."
         f"Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
         f"Remove duplicate rows using df.drop_duplicates() and print shape. "
         f"For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
@@ -43,7 +41,7 @@ def _build_data_prompt_2():
         f"Load '{TIPOLOGIA_CSV}' with pandas. "
         f"Print the shape. "
         f"Standardize all column names to lowercase snake_case. "
-        f"For all string columns: convert all values to lowercase using: df = df.astype(str).apply(lambda x: x.str.lower()). "
+        f"Normalize all text/string columns to lowercase for consistent matching. Handle NaN and mixed-type values gracefully — only apply lowercase to actual string values, skip nulls. For example, 'ROME', 'Rome', and 'rome' should all become 'rome', while NaN stays NaN."
         f"Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
         f"Remove duplicate rows using df.drop_duplicates() and print shape. "
         f"For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "

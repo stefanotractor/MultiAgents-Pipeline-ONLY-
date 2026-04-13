@@ -1,5 +1,5 @@
 """
-Configuration for Transit Anomaly Detection — Multi-Agent System (v2 Light).
+Configuration for Transit Anomaly Detection — Multi-Agent System
 """
 import os
 from dotenv import load_dotenv
