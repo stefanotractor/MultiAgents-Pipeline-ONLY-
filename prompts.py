@@ -17,40 +17,95 @@ from config import (
     OUTPUT_DIR,
 )
 
+# ─────────────────────────────────────────
+# STRUCTURAL CLEANING (reusable template)
+# ─────────────────────────────────────────
 
-# ── Task 1: Load and clean ALLARMI.csv ───────────────────────────────────────
+def _build_structural_cleaning_prompt(input_path, output_path):
+    return (
+        f"You are a data cleaning agent for tabular datasets used in downstream merge and anomaly detection tasks. "
+
+        f"Load the dataset at '{input_path}' and produce a cleaned version saved to '{output_path}'. "
+
+        f"Work autonomously and infer the required Python libraries. "
+
+        f"First inspect the raw schema and print the original shape and original column names. "
+        f"Then standardize column names to lowercase snake_case. "
+
+        f"Immediately after renaming, resolve duplicate column names deterministically by occurrence order. "
+        f"When duplicate column labels are present, rebuild the full ordered list of column names so that each occurrence gets a unique stable name. "
+        f"Do not use ambiguous renaming by duplicated label alone. "
+        f"Do not continue until column names are truly unique and explicitly verified. "
+
+        f"After the schema is safe, clean values column by column. "
+        f"Apply lowercase only to actual string values, preserve nulls, strip outer whitespace, and normalize repeated internal whitespace. "
+        f"Detect values that semantically represent missing, undefined, or non-informative entries by analyzing the column content, and convert them into proper missing values where appropriate. "
+        f"Then remove duplicate rows. "
+
+        f"Handle missing values conservatively and preserve missingness when imputation could distort downstream anomaly detection. "
+
+        f"Before saving, validate that the dataframe is non-empty and has unique column names. "
+        f"Do not save any output if those checks fail. "
+
+        f"Print only a short summary with: original shape, final shape, final column names, duplicate-name collisions handled, and duplicate rows removed. "
+    )
+
+
+# ─────────────────────────────────────────
+# DATASET-SPECIFIC CLEANING AGENTS
+# ─────────────────────────────────────────
+
 def _build_data_prompt():
-    return (
-        f"Load '{ALLARMI_CSV}' with pandas. "
-        f"Print the shape. "
-        f"Standardize all column names to lowercase snake_case. "
-        f"Normalize all text/string columns to lowercase for consistent matching. Handle NaN and mixed-type values gracefully — only apply lowercase to actual string values, skip nulls. For example, 'ROME', 'Rome', and 'rome' should all become 'rome', while NaN stays NaN."
-        f"Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
-        f"Remove duplicate rows using df.drop_duplicates() and print shape. "
-        f"For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
-        f"Use pd.api.types.is_numeric_dtype() to check column types. "
-        f"For numeric columns fill NaN with 0. For non-numeric columns fill NaN with 'unknown'. "
-        f"Print columns names. "
-        f"Save to '{OUTPUT_DIR}/allarmi_clean.csv' without index."
+    return _build_structural_cleaning_prompt(
+        ALLARMI_CSV,
+        f"{OUTPUT_DIR}/allarmi_clean.csv"
     )
 
 
-# ── Task 2: Load and clean TIPOLOGIA_VIAGGIATORE.csv ─────────────────────────
 def _build_data_prompt_2():
-    return (
-        f"Load '{TIPOLOGIA_CSV}' with pandas. "
-        f"Print the shape. "
-        f"Standardize all column names to lowercase snake_case. "
-        f"Normalize all text/string columns to lowercase for consistent matching. Handle NaN and mixed-type values gracefully — only apply lowercase to actual string values, skip nulls. For example, 'ROME', 'Rome', and 'rome' should all become 'rome', while NaN stays NaN."
-        f"Then remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
-        f"Remove duplicate rows using df.drop_duplicates() and print shape. "
-        f"For every non-numeric column: strip whitespace, then replace these values with NaN: 'N.D.', 'n.d.', '?', '-', '//', 'NULL', '', 'None'. "
-        f"Use pd.api.types.is_numeric_dtype() to check column types. "
-        f"For numeric columns fill NaN with 0. For non-numeric columns fill NaN with 'unknown'. "
-        f"Print columns names. "
-        f"Save to '{OUTPUT_DIR}/tipologia_clean.csv' without index."
+    return _build_structural_cleaning_prompt(
+        TIPOLOGIA_CSV,
+        f"{OUTPUT_DIR}/tipologia_clean.csv"
     )
 
+
+# ─────────────────────────────────────────
+# SEMANTIC NORMALIZATION AGENT
+# ─────────────────────────────────────────
+
+def _build_semantic_normalization_prompt(input_path, output_path):
+    return (
+        f"You are a semantic normalization agent for tabular datasets already cleaned at schema level. "
+
+        f"Load the dataset at '{input_path}' and produce a semantically refined version saved to '{output_path}'. "
+
+        f"Work autonomously and infer the required Python libraries. "
+
+        f"The dataset already has a safe schema, so do not rename, reorder, merge, split, or drop columns unless this is strictly necessary to preserve loadability. "
+        f"Focus only on intra-column semantic consistency. "
+
+        f"For each column, inspect the observed non-null values and infer the dominant representation standard from the data itself. "
+        f"Ignore values that are semantically missing, undefined, or non-informative when inferring the dominant representation and when performing normalization. "
+        f"Determine that standard using the prevailing format, notation, structure, length patterns, punctuation, spacing, casing, and semantic consistency shown by the majority of valid values in the column. "
+        f"Identify minority variants that are likely to represent the same underlying concept but appear in a different representation. "
+        f"Normalize those minority variants to the dominant standard only when the mapping is clear, high-confidence, and strongly supported by the column pattern. "
+
+        f"Do not rely only on the single most frequent value. "
+        f"Do not collapse distinct categorical values merely because they look superficially similar. "
+        f"If a value is unusual but not safely mappable to the dominant standard, preserve it and report it as difform rather than correcting it aggressively. "
+
+        f"Do not alter numeric meaning, entity identity, or business semantics without strong evidence from the column distribution. "
+
+        f"For each column that is normalized, report the original minority representations that were mapped to the dominant standard, and report which difform values were preserved because they were not safely correctable. "
+
+        f"Before saving, validate that the dataframe remains non-empty and loadable. "
+        f"Do not save any output if validation fails. "
+        f"Save the semantically refined dataset to '{output_path}' without index. "
+        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
+        f"The output file must always be written during execution. "
+        f"Avoid defining execution entry points or structures that require explicit invocation. "
+        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "    
+)
 
 # ── Task 3: Merge ────────────────────────────────────────────────────────────
 def _build_merge_prompt():
@@ -167,6 +222,16 @@ def _build_report_prompt():
 TASKS = [
     ("data_loading_allarmi",   _build_data_prompt()),
     ("data_loading_tipologia", _build_data_prompt_2()),
+
+    ("semantic_allarmi", _build_semantic_normalization_prompt(
+        f"{OUTPUT_DIR}/allarmi_clean.csv",
+        f"{OUTPUT_DIR}/allarmi_semantic.csv",
+    )),
+    ("semantic_tipologia", _build_semantic_normalization_prompt(
+        f"{OUTPUT_DIR}/tipologia_clean.csv",
+        f"{OUTPUT_DIR}/tipologia_semantic.csv",
+    )),
+
     ("merge",                  _build_merge_prompt()),
     ("baseline_grouping",      _build_baseline_prompt()),
     ("baseline_stats",         _build_baseline_stats_prompt()),

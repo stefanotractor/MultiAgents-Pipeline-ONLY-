@@ -59,6 +59,8 @@ MAX_RETRIES = 2
 EXPECTED_FILES = {
     "data_loading_allarmi":   os.path.join(OUTPUT_DIR, "allarmi_clean.csv"),
     "data_loading_tipologia": os.path.join(OUTPUT_DIR, "tipologia_clean.csv"),
+    "semantic_allarmi":       os.path.join(OUTPUT_DIR, "allarmi_semantic.csv"),
+    "semantic_tipologia":     os.path.join(OUTPUT_DIR, "tipologia_semantic.csv"),
     "merge":                  os.path.join(OUTPUT_DIR, "merged_data.csv"),
     "baseline_grouping":      os.path.join(OUTPUT_DIR, "routes_summary.csv"),
     "baseline_stats":         os.path.join(OUTPUT_DIR, "baseline_data.csv"),
