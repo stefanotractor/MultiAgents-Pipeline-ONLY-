@@ -196,14 +196,33 @@ def _build_merge_prompt():
 # ── Task 4: Group by route ──────────────────────────────────────────────────
 def _build_baseline_prompt():
     return (
-        f"Load '{OUTPUT_DIR}/merged_data.csv' with pandas. "
-        f"Create a 'route' column by combining columns 'areoporto_partenza' and 'areoporto_arrivo' with '-'. "
-        f"Build an aggregation dict: for each column, use 'sum' if pd.api.types.is_numeric_dtype(), else 'first'. "
-        f"Group by 'route' using df.groupby('route').agg(agg_dict).reset_index(). "
-        f"Print shape. "
-        f"Save to '{OUTPUT_DIR}/routes_summary.csv' without index."
-    )
+        f"You are a data aggregation agent responsible for building a route-level summary dataset to be used as baseline input for downstream anomaly detection. "
 
+        f"Load the dataset at '{OUTPUT_DIR}/merged_data.csv'. "
+
+        f"Work autonomously and infer the required Python libraries. "
+
+        f"First, inspect the loaded dataframe: print its shape and column names before proceeding. "
+
+        f"Create a 'route' column by combining the values of 'areoporto_partenza' and 'areoporto_arrivo'. "
+        f"Do not drop the original airport columns after creating the route column. "
+
+        f"For each non-route column, infer the appropriate aggregation strategy from the column's data type: aggregate numeric columns by summing their values, and non-numeric columns by taking the first observed value. "
+        f"Do not hardcode column names when defining the aggregation strategy. "
+        f"Do not apply any transformation or normalization to the aggregated values. "
+
+        f"Group the dataframe by 'route' and aggregate all other columns according to the strategy above. "
+
+        f"Before saving, validate that the resulting dataframe is non-empty and has unique column names. "
+        f"Do not save any output if those checks fail. "
+
+        f"Save the aggregated dataset to '{OUTPUT_DIR}/routes_summary.csv' without index. "
+        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
+        f"Avoid defining execution entry points or structures that require explicit invocation. "
+        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
+
+        f"Print only a short summary with: original merged shape, number of unique routes found, final routes_summary shape. "
+    )
 
 # ── Task 5: Baseline statistics ──────────────────────────────────────────────
 def _build_baseline_stats_prompt():
