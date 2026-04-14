@@ -224,28 +224,21 @@ def _build_baseline_prompt():
 # ── Task 5: Baseline statistics ──────────────────────────────────────────────
 def _build_baseline_stats_prompt():
     return (
-        f"You are a data aggregation agent responsible for building a route-level summary dataset to be used as baseline input for downstream anomaly detection. "
-        f"Load the dataset at '{OUTPUT_DIR}/merged_data.csv'. "
-        f"Work autonomously and infer the required Python libraries. "
-        f"First, inspect the loaded dataframe: print its shape and column names before proceeding. "
-        f"Create a 'route' column by combining the values of 'areoporto_partenza' and 'areoporto_arrivo'. "
-        f"Do not drop the original airport columns after creating the route column. "
-        f"The 'route' column must be used only as the groupby key and must never appear in the aggregation dictionary. "
-        f"Define cols_to_aggregate as all columns except 'route'. "
-        f"Determine whether each column in cols_to_aggregate is numeric using pandas-native type inspection, not numpy subtype checks. "
-        f"For numeric columns, aggregate by summing their values. "
-        f"For non-numeric columns, aggregate by taking the first observed value. "
-        f"Do not apply any transformation or normalization to the aggregated values. "
-        f"Group the dataframe by 'route', aggregate only cols_to_aggregate, and then reset_index so that 'route' is a standard column in the final dataframe. "
-        f"Before saving, validate that the resulting dataframe is non-empty and has unique column names. "
-        f"Do not save any output if those checks fail. "
-        f"Save the aggregated dataset to '{OUTPUT_DIR}/routes_summary.csv' without index. "
-        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
-        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
-        f"Print only a short summary with: original merged shape, number of unique routes found, final routes_summary shape. "
+        f"Load '{OUTPUT_DIR}/routes_summary.csv' with pandas. "
+        f"Import numpy as np. "
+        f"Ensure 'allarmati' is numeric using pd.to_numeric(errors='coerce').fillna(0). "
+        f"Compute global mean and std of 'allarmati' across all routes. "
+        f"Add column 'rolling_mean_alarms' = global mean. "
+        f"Add column 'rolling_std_alarms' = global std. If std is 0, set it to 1. "
+        f"Add column 'z_score': (allarmati - rolling_mean_alarms) / rolling_std_alarms. "
+        f"Add column 'ratio_to_baseline': allarmati / rolling_mean_alarms. Replace inf and -inf with 0. "
+        f"Print global mean and std. "
+        f"Print shape. "
+        f"Print top 10 rows by z_score descending showing route, allarmati, rolling_mean_alarms, z_score. "
+        f"Save the full dataframe to '{OUTPUT_DIR}/baseline_data.csv' without index. "
         + _findings_guidance(
-            "baseline_grouping",
-            "Store merged_shape, unique_routes, aggregation_strategy_summary (list of numeric/non_numeric columns), routes_summary_shape. "
+            "baseline_stats",
+            "Store global_mean_allarmati, global_std_allarmati, baseline_shape, top_routes_by_z (list of dicts with route, allarmati, z_score). "
         )
     )
 
