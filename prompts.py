@@ -25,10 +25,12 @@ from config import (
 def _findings_guidance(task_key: str, extra_notes: str = "") -> str:
     base = (
         f"Maintain a shared findings JSON at '{FINDINGS_JSON}'. "
-        f"At the start, attempt to load it; if missing, initialize an empty dict. "
+        f"At the start, attempt to load it; if missing, empty, invalid, or corrupted, initialize an empty dict instead of failing. "
         f"Store new information under the key '{task_key}' while preserving existing keys for other tasks. "
-        f"Use concise, machine-readable fields (numbers, lists, short strings) that are useful for downstream prompts. "
-        f"After completing the task, update the entry for '{task_key}' and write the full JSON back (overwrite the file). "
+        f"Use concise, machine-readable fields with only native Python JSON-serializable types such as dict, list, str, int, float, bool, or null. "
+        f"Convert pandas and numpy values to native Python types before saving. "
+        f"Convert tuples to lists before saving. "
+        f"After completing the task, update the entry for '{task_key}' and write the full JSON back by overwriting the file. "
     )
     if extra_notes:
         base += extra_notes
@@ -242,37 +244,57 @@ def _build_baseline_stats_prompt():
         )
     )
 
-
 # ── Task 6: Outlier Detection ───────────────────────────────────────────────
 def _build_outlier_prompt():
     algo = DEFAULT_OUTLIER_ALGORITHM
     contam = ISOLATION_FOREST_CONTAMINATION
     neighbors = LOF_N_NEIGHBORS
     zscore_t = ZSCORE_THRESHOLD
+
     return (
-        f"Load '{OUTPUT_DIR}/baseline_data.csv' with pandas. "
-        f"Import IsolationForest from sklearn.ensemble. "
-        f"Ensure columns 'allarmati', 'z_score', 'ratio_to_baseline' are numeric using pd.to_numeric(errors='coerce').fillna(0). "
-        f"Replace inf and -inf with 0. "
-        f"Build feature matrix with columns: allarmati, z_score, ratio_to_baseline. "
+        f"You are an outlier detection agent operating on a route-level baseline dataset. "
+
+        f"Load the dataset at '{OUTPUT_DIR}/baseline_data.csv'. "
+
+        f"If a shared findings JSON exists at '{FINDINGS_JSON}', load it and reuse relevant information from previous steps "
+        f"(especially baseline statistics and column validation). Continue even if it is missing. "
+
+        f"Work autonomously and infer the required Python libraries. "
+
+        f"First inspect the dataset: print shape and column names. "
+
+        f"Ensure that the columns representing engineered features are valid, numeric, and usable for modeling. "
+        f"The expected features are 'allarmati', 'z_score', and 'ratio_to_baseline'. "
+        f"Coerce invalid values to numeric form and handle non-finite values safely so that the dataset is model-ready. "
+
+        f"Construct a feature matrix using exactly these three features, preserving row alignment with the original dataset. "
+
         + (
-            f"model = IsolationForest(contamination={contam}, random_state=42). "
-            f"model.fit(feature_matrix). "
-            f"df['anomaly'] = model.predict(feature_matrix) == -1. "
+            f"Apply an Isolation Forest model using a contamination level of {contam} to detect anomalies. "
             if algo == "IsolationForest" else
-            f"from sklearn.neighbors import LocalOutlierFactor. "
-            f"model = LocalOutlierFactor(n_neighbors={neighbors}, contamination={contam}). "
-            f"df['anomaly'] = model.fit_predict(feature_matrix) == -1. "
+            f"Apply a Local Outlier Factor model using {neighbors} neighbors and contamination {contam}. "
             if algo == "LOF" else
-            f"df['anomaly'] = df['z_score'].abs() > {zscore_t}. "
+            f"Detect anomalies using a z-score threshold of {zscore_t} on the absolute value of z_score. "
         )
-        + f"Do NOT drop any columns. Keep all columns including allarmati, z_score, ratio_to_baseline. "
-        f"Print number of rows where anomaly is True, and total rows. "
-        f"Print top 10 rows where anomaly is True sorted by z_score descending: print df[df['anomaly']==True].nlargest(10,'z_score')[['route','allarmati','z_score']]. "
-        f"Save the full dataframe to '{OUTPUT_DIR}/outlier_results.csv' without index."
+
+        + f"Store the result in a new boolean column named 'anomaly'. "
+        f"Do not drop any columns or rows. Preserve the full dataset. "
+
+        f"Print a short summary with: total number of rows and number of detected anomalies. "
+
+        f"Print the top 10 anomalous rows sorted by highest anomaly severity using z_score, "
+        f"displaying only 'route', 'allarmati', and 'z_score'. "
+
+        f"Before saving, validate that the dataframe is non-empty and consistent. "
+        f"If validation passes, save the dataset to '{OUTPUT_DIR}/outlier_results.csv' without index. "
+
+        f"The dataset must be loaded, processed, and saved within the same execution flow. "
+        f"All steps must run automatically without requiring explicit invocation. "
+
         + _findings_guidance(
             "outlier_detection",
-            "Store total_rows, anomaly_rows, algorithm_used, top_anomalies (list of dicts with route, allarmati, z_score). "
+            "Store total_rows as int, anomaly_rows as int, algorithm_used as string, "
+            "feature_columns as list of strings, and top_anomalies as a list of plain Python dicts with route, allarmati, z_score. "
         )
     )
 
