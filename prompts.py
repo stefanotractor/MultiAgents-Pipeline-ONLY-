@@ -108,7 +108,7 @@ def _build_semantic_normalization_prompt(input_path, output_path):
 )
 
 # ── Task 3: Merge ────────────────────────────────────────────────────────────
-def _build_merge_prompt():
+## def _build_merge_prompt():
     return (
         f"Load '{OUTPUT_DIR}/allarmi_clean.csv' and "
         f"'{OUTPUT_DIR}/tipologia_clean.csv' with pandas. "
@@ -119,6 +119,63 @@ def _build_merge_prompt():
         f"Save to '{OUTPUT_DIR}/merged_data.csv' without index."
     )
 
+## def _build_merge_prompt():
+    return (
+        f"You are a data integration agent responsible for combining two cleaned tabular datasets into a single unified dataset for downstream anomaly detection. "
+
+        f"Load the dataset at '{OUTPUT_DIR}/allarmi_clean.csv' and the dataset at '{OUTPUT_DIR}/tipologia_clean.csv' using pandas. "
+
+        f"Work autonomously and infer the required Python libraries. "
+
+        f"First, inspect both dataframes independently: print their shapes and column names. "
+        f"Then identify the common columns between the two dataframes and print them explicitly before proceeding. "
+
+        f"Merge the two dataframes on the common columns using an outer join to preserve all records from both sources. "
+        f"After merging, remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
+        f"Do not drop or rename any column unless it is a confirmed structural duplicate introduced by the merge. "
+
+        f"Do not perform any imputation, encoding, or transformation on the merged data. "
+        f"Preserve the original values and types from both sources as-is. "
+
+        f"Before saving, validate that the merged dataframe is non-empty and has unique column names. "
+        f"Do not save any output if those checks fail. "
+
+        f"Save the merged dataset to '{OUTPUT_DIR}/merged_data.csv' without index. "
+        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
+        f"Avoid defining execution entry points or structures that require explicit invocation. "
+        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
+
+        f"Print only a short summary with: shape of allarmi_clean, shape of tipologia_clean, common columns used for merge, final merged shape, and duplicate columns removed. "
+    )
+
+def _build_merge_prompt():
+    return (
+        f"You are a data integration agent responsible for combining two cleaned tabular datasets into a single unified dataset for downstream anomaly detection. "
+
+        f"Load the dataset at '{OUTPUT_DIR}/allarmi_clean.csv' and the dataset at '{OUTPUT_DIR}/tipologia_clean.csv' using pandas. "
+
+        f"Work autonomously and infer the required Python libraries. "
+
+        f"First, inspect both dataframes independently: print their shapes and column names. "
+        f"Then identify the common columns between the two dataframes and print them explicitly before proceeding. "
+
+        f"Merge the two dataframes on the common columns using an outer join to preserve all records from both sources. "
+        f"After merging, ensure that no duplicate columns remain in the result. "
+        f"Do not drop or rename any column unless it is a confirmed structural duplicate introduced by the merge. "
+
+        f"Do not perform any imputation, encoding, or transformation on the merged data. "
+        f"Preserve the original values and types from both sources as-is. "
+
+        f"Before saving, validate that the merged dataframe is non-empty and has unique column names. "
+        f"Do not save any output if those checks fail. "
+
+        f"Save the merged dataset to '{OUTPUT_DIR}/merged_data.csv' without index. "
+        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
+        f"Avoid defining execution entry points or structures that require explicit invocation. "
+        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
+
+        f"Print only a short summary with: shape of allarmi_clean, shape of tipologia_clean, common columns used for merge, final merged shape, and duplicate columns removed. "
+    )
 
 # ── Task 4: Group by route ──────────────────────────────────────────────────
 def _build_baseline_prompt():
