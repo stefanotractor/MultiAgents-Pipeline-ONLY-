@@ -16,6 +16,7 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 ALLARMI_CSV = os.path.join(DATA_DIR, "ALLARMI.csv")
 TIPOLOGIA_CSV = os.path.join(DATA_DIR, "TIPOLOGIA_VIAGGIATORE.csv")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output")
+FINDINGS_JSON = os.path.join(OUTPUT_DIR, "findings.json")
 
 # ── Outlier Detection ────────────────────────────────────────────────────────
 DEFAULT_OUTLIER_ALGORITHM = "IsolationForest"

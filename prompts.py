@@ -15,7 +15,24 @@ from config import (
     LM_STUDIO_API_KEY,
     LM_STUDIO_MODEL,
     OUTPUT_DIR,
+    FINDINGS_JSON,
 )
+
+# ─────────────────────────────────────────
+# Findings persistence helper
+# ─────────────────────────────────────────
+
+def _findings_guidance(task_key: str, extra_notes: str = "") -> str:
+    base = (
+        f"Maintain a shared findings JSON at '{FINDINGS_JSON}'. "
+        f"At the start, attempt to load it; if missing, initialize an empty dict. "
+        f"Store new information under the key '{task_key}' while preserving existing keys for other tasks. "
+        f"Use concise, machine-readable fields (numbers, lists, short strings) that are useful for downstream prompts. "
+        f"After completing the task, update the entry for '{task_key}' and write the full JSON back (overwrite the file). "
+    )
+    if extra_notes:
+        base += extra_notes
+    return base
 
 # ─────────────────────────────────────────
 # STRUCTURAL CLEANING (reusable template)
@@ -72,16 +89,28 @@ def _build_structural_cleaning_prompt(input_path, output_path):
 # ─────────────────────────────────────────
 
 def _build_data_prompt():
-    return _build_structural_cleaning_prompt(
-        ALLARMI_CSV,
-        f"{OUTPUT_DIR}/allarmi_clean.csv"
+    return (
+        _build_structural_cleaning_prompt(
+            ALLARMI_CSV,
+            f"{OUTPUT_DIR}/allarmi_clean.csv"
+        )
+        + _findings_guidance(
+            "data_loading_allarmi",
+            "Capture shape_before, shape_after, columns_final, duplicate_name_collisions, duplicate_rows_removed. "
+        )
     )
 
 
 def _build_data_prompt_2():
-    return _build_structural_cleaning_prompt(
-        TIPOLOGIA_CSV,
-        f"{OUTPUT_DIR}/tipologia_clean.csv"
+    return (
+        _build_structural_cleaning_prompt(
+            TIPOLOGIA_CSV,
+            f"{OUTPUT_DIR}/tipologia_clean.csv"
+        )
+        + _findings_guidance(
+            "data_loading_tipologia",
+            "Capture shape_before, shape_after, columns_final, duplicate_name_collisions, duplicate_rows_removed. "
+        )
     )
 
 
@@ -89,79 +118,35 @@ def _build_data_prompt_2():
 # SEMANTIC NORMALIZATION AGENT
 # ─────────────────────────────────────────
 
-def _build_semantic_normalization_prompt(input_path, output_path):
+def _build_semantic_normalization_prompt(input_path, output_path, findings_key):
     return (
         f"You are a semantic normalization agent for tabular datasets already cleaned at schema level. "
-
         f"Load the dataset at '{input_path}' and produce a semantically refined version saved to '{output_path}'. "
 
         f"Work autonomously and infer the required Python libraries. "
 
-        f"The dataset already has a safe schema, so do not rename, reorder, merge, split, or drop columns unless this is strictly necessary to preserve loadability. "
+        f"The dataset already has a safe schema, so do not rename, reorder, merge, split, or drop columns unless strictly necessary. "
         f"Focus only on intra-column semantic consistency. "
 
-        f"For each column, inspect the observed non-null values and infer the dominant representation standard from the data itself. "
-        f"Ignore values that are semantically missing, undefined, or non-informative when inferring the dominant representation and when performing normalization. "
-        f"Determine that standard using the prevailing format, notation, structure, length patterns, punctuation, spacing, casing, and semantic consistency shown by the majority of valid values in the column. "
-        f"Identify minority variants that are likely to represent the same underlying concept but appear in a different representation. "
-        f"Normalize those minority variants to the dominant standard only when the mapping is clear, high-confidence, and strongly supported by the column pattern. "
+        f"For each column, inspect non-null values and infer the dominant representation. "
+        f"Ignore missing or non-informative values when inferring patterns. "
 
-        f"Do not rely only on the single most frequent value. "
-        f"Do not collapse distinct categorical values merely because they look superficially similar. "
-        f"If a value is unusual but not safely mappable to the dominant standard, preserve it and report it as difform rather than correcting it aggressively. "
+        f"Normalize only high-confidence minority variants. "
+        f"Do not collapse distinct categories. "
+        f"Preserve uncertain or difform values and report them. "
 
-        f"Do not alter numeric meaning, entity identity, or business semantics without strong evidence from the column distribution. "
+        f"Before saving, validate that the dataframe is non-empty and still loadable. "
+        f"The dataset must be loaded, processed, and saved within the same execution flow. "
+        f"All steps must run automatically without requiring any explicit invocation or entry point. "
+        f"If validation passes, write the output file immediately using to_csv. "
+        f"Do not check whether the output file already exists before writing it. "
+        f"The output file must always be created during execution if the dataframe is valid. "
 
-        f"For each column that is normalized, report the original minority representations that were mapped to the dominant standard, and report which difform values were preserved because they were not safely correctable. "
-
-        f"Before saving, validate that the dataframe remains non-empty and loadable. "
-        f"Do not save any output if validation fails. "
         f"Save the semantically refined dataset to '{output_path}' without index. "
-        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
-        f"The output file must always be written during execution. "
-        f"Avoid defining execution entry points or structures that require explicit invocation. "
-        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "    
-)
-
-# ── Task 3: Merge ────────────────────────────────────────────────────────────
-## def _build_merge_prompt():
-    return (
-        f"Load '{OUTPUT_DIR}/allarmi_clean.csv' and "
-        f"'{OUTPUT_DIR}/tipologia_clean.csv' with pandas. "
-        f"Find the common columns between the two dataframes and print them. "
-        f"Merge on the common columns using outer join. "
-        f"Remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
-        f"Print shape of the merged dataframe. "
-        f"Save to '{OUTPUT_DIR}/merged_data.csv' without index."
-    )
-
-## def _build_merge_prompt():
-    return (
-        f"You are a data integration agent responsible for combining two cleaned tabular datasets into a single unified dataset for downstream anomaly detection. "
-
-        f"Load the dataset at '{OUTPUT_DIR}/allarmi_clean.csv' and the dataset at '{OUTPUT_DIR}/tipologia_clean.csv' using pandas. "
-
-        f"Work autonomously and infer the required Python libraries. "
-
-        f"First, inspect both dataframes independently: print their shapes and column names. "
-        f"Then identify the common columns between the two dataframes and print them explicitly before proceeding. "
-
-        f"Merge the two dataframes on the common columns using an outer join to preserve all records from both sources. "
-        f"After merging, remove duplicate columns using: df = df.loc[:, ~df.columns.duplicated()]. "
-        f"Do not drop or rename any column unless it is a confirmed structural duplicate introduced by the merge. "
-
-        f"Do not perform any imputation, encoding, or transformation on the merged data. "
-        f"Preserve the original values and types from both sources as-is. "
-
-        f"Before saving, validate that the merged dataframe is non-empty and has unique column names. "
-        f"Do not save any output if those checks fail. "
-
-        f"Save the merged dataset to '{OUTPUT_DIR}/merged_data.csv' without index. "
-        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
-        f"Avoid defining execution entry points or structures that require explicit invocation. "
-        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
-
-        f"Print only a short summary with: shape of allarmi_clean, shape of tipologia_clean, common columns used for merge, final merged shape, and duplicate columns removed. "
+        + _findings_guidance(
+            findings_key,
+            "Include shape_before, shape_after, normalization_mappings, preserved_difform_values. "
+        )
     )
 
 def _build_merge_prompt():
@@ -191,6 +176,10 @@ def _build_merge_prompt():
         f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
 
         f"Print only a short summary with: shape of allarmi_clean, shape of tipologia_clean, common columns used for merge, final merged shape, and duplicate columns removed. "
+        + _findings_guidance(
+            "merge",
+            "Record shapes_allarmi_tipologia, common_columns, merged_shape, duplicate_columns_removed. "
+        )
     )
 
 # ── Task 4: Group by route ──────────────────────────────────────────────────
@@ -226,22 +215,38 @@ def _build_baseline_prompt():
         f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
 
         f"Print only a short summary with: original merged shape, number of unique routes found, final routes_summary shape. "
+        + _findings_guidance(
+            "baseline_grouping",
+            "Store merged_shape, unique_routes, aggregation_strategy_summary (list of numeric/non_numeric columns), routes_summary_shape. "
+        )
     )
 
 # ── Task 5: Baseline statistics ──────────────────────────────────────────────
 def _build_baseline_stats_prompt():
     return (
-        f"Load '{OUTPUT_DIR}/routes_summary.csv' with pandas. "
-        f"Ensure 'allarmati' is numeric using pd.to_numeric(errors='coerce').fillna(0). "
-        f"Compute global mean and std of 'allarmati' across all routes. "
-        f"Add column 'rolling_mean_alarms' = global mean. "
-        f"Add column 'rolling_std_alarms' = global std. If std is 0, set it to 1. "
-        f"Add column 'z_score': (allarmati - rolling_mean_alarms) / rolling_std_alarms. "
-        f"Add column 'ratio_to_baseline': allarmati / rolling_mean_alarms. Replace inf with 0. "
-        f"Print global mean and std. "
-        f"Print shape. "
-        f"Print top 10 rows by z_score descending showing route, allarmati, rolling_mean_alarms, z_score. "
-        f"Save the full dataframe to '{OUTPUT_DIR}/baseline_data.csv' without index."
+        f"You are a data aggregation agent responsible for building a route-level summary dataset to be used as baseline input for downstream anomaly detection. "
+        f"Load the dataset at '{OUTPUT_DIR}/merged_data.csv'. "
+        f"Work autonomously and infer the required Python libraries. "
+        f"First, inspect the loaded dataframe: print its shape and column names before proceeding. "
+        f"Create a 'route' column by combining the values of 'areoporto_partenza' and 'areoporto_arrivo'. "
+        f"Do not drop the original airport columns after creating the route column. "
+        f"The 'route' column must be used only as the groupby key and must never appear in the aggregation dictionary. "
+        f"Define cols_to_aggregate as all columns except 'route'. "
+        f"Determine whether each column in cols_to_aggregate is numeric using pandas-native type inspection, not numpy subtype checks. "
+        f"For numeric columns, aggregate by summing their values. "
+        f"For non-numeric columns, aggregate by taking the first observed value. "
+        f"Do not apply any transformation or normalization to the aggregated values. "
+        f"Group the dataframe by 'route', aggregate only cols_to_aggregate, and then reset_index so that 'route' is a standard column in the final dataframe. "
+        f"Before saving, validate that the resulting dataframe is non-empty and has unique column names. "
+        f"Do not save any output if those checks fail. "
+        f"Save the aggregated dataset to '{OUTPUT_DIR}/routes_summary.csv' without index. "
+        f"Ensure that the dataset is loaded, processed, and saved within the same execution flow. "
+        f"Assume that the code will be executed exactly as written, so all steps must run immediately. "
+        f"Print only a short summary with: original merged shape, number of unique routes found, final routes_summary shape. "
+        + _findings_guidance(
+            "baseline_grouping",
+            "Store merged_shape, unique_routes, aggregation_strategy_summary (list of numeric/non_numeric columns), routes_summary_shape. "
+        )
     )
 
 
@@ -272,6 +277,10 @@ def _build_outlier_prompt():
         f"Print number of rows where anomaly is True, and total rows. "
         f"Print top 10 rows where anomaly is True sorted by z_score descending: print df[df['anomaly']==True].nlargest(10,'z_score')[['route','allarmati','z_score']]. "
         f"Save the full dataframe to '{OUTPUT_DIR}/outlier_results.csv' without index."
+        + _findings_guidance(
+            "outlier_detection",
+            "Store total_rows, anomaly_rows, algorithm_used, top_anomalies (list of dicts with route, allarmati, z_score). "
+        )
     )
 
 
@@ -292,6 +301,10 @@ def _build_risk_prompt():
         f"anom['risk_level'] = np.select(conditions, choices, default='LOW'). "
         f"Print risk_level value_counts. "
         f"Save full dataframe to '{OUTPUT_DIR}/risk_profiled.csv' without index."
+        + _findings_guidance(
+            "risk_profiling",
+            "Store anomaly_rows, risk_level_counts, rules_used (text). "
+        )
     )
 
 
@@ -311,6 +324,10 @@ def _build_report_prompt():
         f"Save report to '{OUTPUT_DIR}/anomaly_report.txt'. "
         f"Also save a JSON version with json.dump to '{OUTPUT_DIR}/anomaly_report.json'. "
         f"Print the report."
+        + _findings_guidance(
+            "report_generation",
+            "Store top_anomalies_in_report (list), report_txt_path, report_json_path. "
+        )
     )
 
 
@@ -322,10 +339,12 @@ TASKS = [
     ("semantic_allarmi", _build_semantic_normalization_prompt(
         f"{OUTPUT_DIR}/allarmi_clean.csv",
         f"{OUTPUT_DIR}/allarmi_semantic.csv",
+        "semantic_allarmi",
     )),
     ("semantic_tipologia", _build_semantic_normalization_prompt(
         f"{OUTPUT_DIR}/tipologia_clean.csv",
         f"{OUTPUT_DIR}/tipologia_semantic.csv",
+        "semantic_tipologia",
     )),
 
     ("merge",                  _build_merge_prompt()),

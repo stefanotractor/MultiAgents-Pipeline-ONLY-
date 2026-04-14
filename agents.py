@@ -53,7 +53,7 @@ class AgentState(MessagesState):
     retry_count: int
 
 
-MAX_RETRIES = 2
+MAX_RETRIES = 4
 
 # Maps each task name to the file it MUST produce.
 EXPECTED_FILES = {
