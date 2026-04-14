@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LM_STUDIO_BASE_URL = "https://api.groq.com/openai/v1"
-LM_STUDIO_API_KEY  = os.getenv("GROQ_API_KEY", "")
-LM_STUDIO_MODEL    = "llama-3.3-70b-versatile"
+LM_STUDIO_BASE_URL = "https://api.mistral.ai/v1"
+LM_STUDIO_API_KEY  = os.getenv("MISTRAL_API_KEY", "")
+LM_STUDIO_MODEL    = "mistral-small-latest"
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))

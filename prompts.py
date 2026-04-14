@@ -207,11 +207,15 @@ def _build_baseline_prompt():
         f"Create a 'route' column by combining the values of 'areoporto_partenza' and 'areoporto_arrivo'. "
         f"Do not drop the original airport columns after creating the route column. "
 
-        f"For each non-route column, infer the appropriate aggregation strategy from the column's data type: aggregate numeric columns by summing their values, and non-numeric columns by taking the first observed value. "
+        f"Build the aggregation strategy for every column except 'route'. "
         f"Do not hardcode column names when defining the aggregation strategy. "
+        f"Determine whether a column is numeric using pandas-native type inspection, not numpy subtype checks. "
+        f"For numeric columns, aggregate by summing their values. "
+        f"For non-numeric columns, aggregate by taking the first observed value. "
         f"Do not apply any transformation or normalization to the aggregated values. "
 
         f"Group the dataframe by 'route' and aggregate all other columns according to the strategy above. "
+        f"After aggregation, ensure that 'route' is present as a standard column in the final dataframe and not only as an index. "
 
         f"Before saving, validate that the resulting dataframe is non-empty and has unique column names. "
         f"Do not save any output if those checks fail. "
